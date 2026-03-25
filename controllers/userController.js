@@ -1,4 +1,4 @@
-import User from "../models/userModel"
+import User from "../models/userModel.js"
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
@@ -17,10 +17,11 @@ const generateToken = async (id)=>{
 export const userRegistration = async (req , res)=>{
     try{
         let {username , email , password} = req.body; // data from form and req body
-
-        let user = await User.find({
+    
+        let user = await User.findOne({
             $or : [{username} , {email}]
         });
+
 
         if(user){
             return res.status(409).send({message: 'User with this username or email is already exist!' , success: false});
@@ -46,19 +47,22 @@ export const userRegistration = async (req , res)=>{
 export const userLogin = async (req , res) => {
     let {username , email , password} = req.body;
 
-    if(!username && !email){
-        res.status(400).send({message : 'Please provide username or email for login' , status : false});
-    }
+    if (!username && !email) {
+    return res.status(400).send({
+        message: "Please provide username or email",
+        status: false
+  });
+}
 
     let user = await User.findOne({
         $or : [{username} , {email}]
     });
 
     if(!user){
-        res.status(404).send({message: "user with this username or email doesn't exist" , status : false});
+        return res.status(404).send({message: "user with this username or email doesn't exist" , status : false});
     }
 
-    const isUser = bcrypt.compare(password , user.password);
+    const isUser = await bcrypt.compare(password , user.password);
 
     if(!isUser){
         return res.status(400).send({ message: "Invalid credentials!", success: false });
@@ -68,10 +72,29 @@ export const userLogin = async (req , res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: false
     }
     return res
     .status(200)
     .cookie("accessToken", accessToken, options)
     .json({ message: "user logged in successfully", success: true })
+}
+
+export const getMe = (req, res) => {
+  return res.status(200).json({
+    isLoggedIn: true,
+    userId: req.user._id,
+    username: req.user.username
+  });
+};
+
+export const logout = (req , res) => {
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+    return res
+        .status(200)
+        .clearCookie("accessToken", options)
+        .json({ message: "user loggOut successfully", success: true });
 }

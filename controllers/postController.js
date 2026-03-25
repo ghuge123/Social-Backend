@@ -1,4 +1,4 @@
-import Post from "../models/Post.js";
+import Post from "../models/postModel.js";
 
 // Create Post
 export const createPost = async (req, res) => {
@@ -56,12 +56,13 @@ export const likePost = async (req, res) => {
     }
 
     // check if already liked
-    const alreadyLiked = post.likes.includes(userId);
+    const alreadyLiked = post.likes.includes(userId._id);
+
 
     if (alreadyLiked) {
       // unlike
       post.likes = post.likes.filter(
-        (id) => id.toString() !== userId.toString()
+        (id) => id.toString() !== userId?._id.toString()
       );
     } else {
       // like
