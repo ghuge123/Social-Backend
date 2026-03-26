@@ -81,6 +81,7 @@ export const userLogin = async (req , res) => {
 }
 
 export const getMe = (req, res) => {
+    console.log(req.user);
   return res.status(200).json({
     isLoggedIn: true,
     userId: req.user._id,
