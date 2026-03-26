@@ -1,120 +1,100 @@
-import Post from "../models/postModel.js";
+import { Card, CardContent, Typography, IconButton } from "@mui/material";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
+import { request } from "../services/api";
 
-// Create Post
-export const createPost = async (req, res) => {
-  try {
-    const { text } = req.body;
-    const image = req.file ? req.file.path : null;
+export default function PostCard({ post, refresh, userId }) {
 
-    if (!text && !image) {
-      return res.status(400).json({
-        message: "Post must have text or image",
-        status: false
-      });
+  // Check if liked
+  const isLiked = userId && post.likes.includes(userId);
+
+  // Like handler
+  const handleLike = async () => {
+    try {
+      await request(`/posts/${post._id}/like`, "PUT");
+      refresh();
+    } catch {
+      alert("Login required");
+      window.location.href = "/login";
     }
+  };
 
-    const post = await Post.create({
-      user: req.user, // from auth middleware
-      text,
-      image
-    });
+  // Comment handler
+  const handleComment = async () => {
+    const text = prompt("Enter your comment");
 
-    return res.status(201).json({
-      message: "Post created successfully",
-      post
-    });
+    if (!text) return;
 
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-
-export const getPosts = async (req, res) => {
-  try {
-    const posts = await Post.find()
-      .populate("user", "username")
-      .populate("comments.user", "username")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json(posts);
-
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-export const likePost = async (req, res) => {
-  try {
-    const postId = req.params.id;
-    const userId = req.user;
-
-    const post = await Post.findById(postId);
-
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
+    try {
+      await request(`/posts/${post._id}/comment`, "POST", { text });
+      refresh();
+    } catch {
+      alert("Login required");
+      window.location.href = "/login";
     }
+  };
 
-    // check if already liked
-    const alreadyLiked = post.likes.includes(userId._id);
+  return (
+    <Card className="mb-3 shadow-sm">
+      <CardContent>
 
+        {/* Username */}
+        <Typography variant="h6">
+          {post.user?.username}
+        </Typography>
 
-    if (alreadyLiked) {
-      // unlike
-      post.likes = post.likes.filter(
-        (id) => id.toString() !== userId?._id.toString()
-      );
-    } else {
-      // like
-      post.likes.push(userId);
-    }
+        {/* Text */}
+        <Typography>{post.text}</Typography>
 
-    await post.save();
+        {/* Image */}
+        {post.image && (
+          <img
+            src={`https://social-backend-2pe5.onrender.com/${post.image}`}
+            className="img-fluid mt-2 rounded"
+            alt="post"
+          />
+        )}
 
-    return res.status(200).json({
-      message: alreadyLiked ? "Post unliked" : "Post liked",
-      likes: post.likes.length
-    });
+        {/* Like + Comment Section */}
+        <div className="d-flex align-items-center mt-3">
 
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
-};
+          {/* Like */}
+          <IconButton onClick={handleLike}>
+            {isLiked ? (
+              <FavoriteIcon style={{ color: "red" }} />
+            ) : (
+              <FavoriteBorderIcon />
+            )}
+          </IconButton>
 
-export const commentPost = async (req, res) => {
-  try {
-    const postId = req.params.id;
-    const { text } = req.body;
-    const userId = req.user;
+          <Typography className="me-3">
+            {post.likes.length}
+          </Typography>
 
-    if (!text) {
-      return res.status(400).json({
-        message: "Comment text required"
-      });
-    }
+          {/* Comment */}
+          <IconButton onClick={handleComment}>
+            <ChatBubbleOutlineIcon />
+          </IconButton>
 
-    const post = await Post.findById(postId);
+          <Typography>
+            {post.comments.length}
+          </Typography>
 
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" });
-    }
+        </div>
 
-    const newComment = {
-      user: userId,
-      text,
-      createdAt: new Date()
-    };
+        {/* Optional: Show comments list (bonus) */}
+        {post.comments.length > 0 && (
+          <div className="mt-2">
+            {post.comments.map((c, i) => (
+              <Typography key={i} variant="body2">
+                • {c.text}
+              </Typography>
+            ))}
+          </div>
+        )}
 
-    post.comments.push(newComment);
-
-    await post.save();
-
-    return res.status(200).json({
-      message: "Comment added",
-      comments: post.comments
-    });
-
-  } catch (error) {
-    return res.status(500).json({ message: error.message });
-  }
-};
+      </CardContent>
+    </Card>
+  );
+}
