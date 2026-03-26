@@ -7,8 +7,6 @@ export const verifyJWT = async (req, res, next) => {
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
 
-      console.log(token);
-
     if (!token) {
       return res.status(401).json({ message: "Unauthorized user" });
     }
@@ -17,7 +15,6 @@ export const verifyJWT = async (req, res, next) => {
 
     const user = await User.findById(decoded.user?.id).select("-password");
 
-    console.log(user);
 
     if (!user) {
       return res.status(401).json({ message: "Invalid token" });
